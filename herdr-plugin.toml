@@ -1,5 +1,5 @@
-id = "local.stack"
-name = "Stack"
+id = "herdr-stack"
+name = "herdr-stack"
 version = "0.2.0"
 min_herdr_version = "0.9.1"
 description = "Zellij-style stacked panes: the focused pane expands, its siblings collapse to strips"

@@ -30,13 +30,13 @@ The focused pane expands; its siblings collapse to thin strips but stay visible.
 From GitHub (runs `cargo build --release --locked` for you):
 
 ```sh
-herdr plugin install <owner>/herdr-stack
+herdr plugin install therealhieu/herdr-stack
 ```
 
 From a local checkout (`plugin link` does not run build commands):
 
 ```sh
-git clone <this-repo> ~/git/herdr-stack
+git clone https://github.com/therealhieu/herdr-stack ~/git/herdr-stack
 cd ~/git/herdr-stack && cargo build --release --locked
 herdr plugin link .
 ```
@@ -47,11 +47,11 @@ Optional toggle key in `~/.config/herdr/config.toml`:
 [[keys.command]]
 key = "prefix+shift+s"
 type = "plugin_action"
-command = "local.stack.toggle"
+command = "herdr-stack.toggle"
 description = "stack: toggle for this tab"
 ```
 
-Then `herdr server reload-config`. On Windows use `command = "local.stack.toggle-windows"`
+Then `herdr server reload-config`. On Windows use `command = "herdr-stack.toggle-windows"`
 (plugin action ids must be unique, so the Windows binary path gets its own action).
 
 ## Usage
@@ -60,16 +60,16 @@ Split panes as usual and move focus (`prefix+h/j/k/l` or mouse). The focused pan
 
 | Goal | How |
 |---|---|
-| Toggle stacking for the current tab | `prefix+shift+s` (or `herdr plugin action invoke local.stack.toggle`) |
-| Disable everywhere | `herdr plugin disable local.stack` |
-| Re-enable | `herdr plugin enable local.stack` |
-| Uninstall | `herdr plugin unlink local.stack` |
+| Toggle stacking for the current tab | `prefix+shift+s` (or `herdr plugin action invoke herdr-stack.toggle`) |
+| Disable everywhere | `herdr plugin disable herdr-stack` |
+| Re-enable | `herdr plugin enable herdr-stack` |
+| Uninstall | `herdr plugin unlink herdr-stack` |
 
 Disabling leaves pane sizes as they are.
 
 ## Configuration
 
-Optional `$(herdr plugin config-dir local.stack)/config.json`:
+Optional `$(herdr plugin config-dir herdr-stack)/config.json`:
 
 ```json
 {
@@ -114,3 +114,7 @@ target/release/herdr-stack <pane_id>   # stack around a pane manually (needs HER
 - Resizing happens just after the focus change, so a brief re-layout is visible.
 - Zoomed tabs are skipped.
 - Windows builds compile but have not been tested on a real Windows Herdr yet.
+
+## License
+
+MIT
