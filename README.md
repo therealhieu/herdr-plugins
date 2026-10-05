@@ -17,18 +17,28 @@ The focused pane expands; its siblings collapse to thin strips but stay visible.
 - Each side of the tab's top split stacks independently; the top split itself is never resized.
 - Works for stacked (`down`) and side-by-side (`right`) splits, nested to any depth.
 - Per-tab on/off toggle.
-- Uses only Herdr's public socket API (`layout.export`, `pane.layout`, `layout.set_split_ratio`), so it needs no rebuild when Herdr updates.
+- Uses only Herdr's public socket API (`layout.export`, `pane.layout`, `layout.set_split_ratio`), so it keeps working across Herdr updates.
+- A small native binary (Rust, ~0.4 MB, std + `serde_json`) — no runtime dependencies.
 
 ## Requirements
 
-- Herdr ≥ 0.9.1 (macOS or Linux)
-- `python3` on `PATH` (standard library only)
+- Herdr ≥ 0.9.1 (macOS, Linux, or Windows)
+- Rust toolchain (`cargo`, via [rustup](https://rustup.rs)) — the plugin compiles itself on install (~10–40 s)
 
 ## Install
 
+From GitHub (runs `cargo build --release --locked` for you):
+
+```sh
+herdr plugin install <owner>/herdr-stack
+```
+
+From a local checkout (`plugin link` does not run build commands):
+
 ```sh
 git clone <this-repo> ~/git/herdr-stack
-herdr plugin link ~/git/herdr-stack
+cd ~/git/herdr-stack && cargo build --release --locked
+herdr plugin link .
 ```
 
 Optional toggle key in `~/.config/herdr/config.toml`:
@@ -41,7 +51,8 @@ command = "local.stack.toggle"
 description = "stack: toggle for this tab"
 ```
 
-Then `herdr server reload-config`.
+Then `herdr server reload-config`. On Windows use `command = "local.stack.toggle-windows"`
+(plugin action ids must be unique, so the Windows binary path gets its own action).
 
 ## Usage
 
@@ -86,11 +97,20 @@ pane.focused event
   → layout.set_split_ratio for each changed split
 ```
 
-Runs are serialized with a file lock so rapid focus changes don't interleave.
+Runs are serialized with a file lock (`std::fs::File::lock`) so rapid focus changes don't interleave.
 Disabled tabs are stored in `$HERDR_PLUGIN_STATE_DIR/disabled-tabs.json`.
+
+## Development
+
+```sh
+cargo test                     # stacking plan unit tests
+cargo build --release          # herdr picks up the new binary on the next focus event
+target/release/herdr-stack <pane_id>   # stack around a pane manually (needs HERDR_SOCKET_PATH)
+```
 
 ## Limitations
 
 - Herdr clamps split ratios to 0.1–0.9, so a strip is at least 10% of its split. Strips are typically 3–4 rows rather than Zellij's single title line.
 - Resizing happens just after the focus change, so a brief re-layout is visible.
 - Zoomed tabs are skipped.
+- Windows builds compile but have not been tested on a real Windows Herdr yet.
