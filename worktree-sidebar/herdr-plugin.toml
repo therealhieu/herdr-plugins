@@ -1,0 +1,40 @@
+id = "herdr-worktree-sidebar"
+name = "herdr-worktree-sidebar"
+version = "0.1.0"
+min_herdr_version = "0.9.1"
+description = "Sidebar tokens for Git worktrees: $wt marker, $repo parent name, $dirty file count"
+platforms = ["linux", "macos"]
+
+
+# Refresh every workspace once the server is ready.
+[[startup]]
+command = ["bash", "bin/refresh.sh"]
+
+# Refresh only the workspace the event belongs to.
+[[events]]
+on = "workspace.created"
+command = ["bash", "bin/refresh.sh"]
+
+[[events]]
+on = "worktree.created"
+command = ["bash", "bin/refresh.sh"]
+
+[[events]]
+on = "worktree.opened"
+command = ["bash", "bin/refresh.sh"]
+
+[[events]]
+on = "pane.created"
+command = ["bash", "bin/refresh.sh"]
+
+# An agent finishing a turn is the most likely moment files changed.
+[[events]]
+on = "pane.agent_status_changed"
+command = ["bash", "bin/refresh.sh"]
+
+
+[[actions]]
+id = "refresh"
+title = "Refresh worktree sidebar tokens"
+contexts = ["workspace"]
+command = ["bash", "bin/refresh.sh", "--all"]
