@@ -6,7 +6,7 @@ rust-version = "1.89"
 description = "Zellij-style stacked panes for Herdr"
 publish = false
 license = "MIT"
-repository = "https://github.com/therealhieu/herdr-stack"
+repository = "https://github.com/therealhieu/herdr-plugins"
 
 [dependencies]
 serde_json = "1"

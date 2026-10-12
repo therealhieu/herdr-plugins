@@ -30,14 +30,14 @@ The focused pane expands; its siblings collapse to thin strips but stay visible.
 From GitHub (runs `cargo build --release --locked` for you):
 
 ```sh
-herdr plugin install therealhieu/herdr-stack
+herdr plugin install therealhieu/herdr-plugins/stack
 ```
 
 From a local checkout (`plugin link` does not run build commands):
 
 ```sh
-git clone https://github.com/therealhieu/herdr-stack ~/git/herdr-stack
-cd ~/git/herdr-stack && cargo build --release --locked
+git clone https://github.com/therealhieu/herdr-plugins ~/git/herdr-plugins
+cd ~/git/herdr-plugins/stack && cargo build --release --locked
 herdr plugin link .
 ```
 
@@ -63,7 +63,7 @@ Split panes as usual and move focus (`prefix+h/j/k/l` or mouse). The focused pan
 | Toggle stacking for the current tab | `prefix+shift+s` (or `herdr plugin action invoke herdr-stack.toggle`) |
 | Disable everywhere | `herdr plugin disable herdr-stack` |
 | Re-enable | `herdr plugin enable herdr-stack` |
-| Uninstall | `herdr plugin unlink herdr-stack` |
+| Uninstall | `herdr plugin uninstall herdr-stack` |
 
 Disabling leaves pane sizes as they are.
 
