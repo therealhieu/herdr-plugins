@@ -2,7 +2,7 @@ id = "herdr-worktree-sidebar"
 name = "herdr-worktree-sidebar"
 version = "0.1.0"
 min_herdr_version = "0.9.1"
-description = "Sidebar tokens for Git worktrees: $wt marker, $repo parent name, $dirty file count"
+description = "Sidebar tokens for Git worktrees: $repo parent name, $dirty count, $branch and $sync per agent"
 platforms = ["linux", "macos"]
 
 
@@ -30,6 +30,12 @@ command = ["bash", "bin/refresh.sh"]
 # An agent finishing a turn is the most likely moment files changed.
 [[events]]
 on = "pane.agent_status_changed"
+command = ["bash", "bin/refresh.sh"]
+
+# Git has no hook into Herdr, so a checkout or commit shows up when you next focus a pane.
+# Switching spaces also fires pane.focused, so workspace.focused would only double the work.
+[[events]]
+on = "pane.focused"
 command = ["bash", "bin/refresh.sh"]
 
 

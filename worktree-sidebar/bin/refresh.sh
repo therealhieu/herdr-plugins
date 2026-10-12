@@ -1,35 +1,53 @@
 #!/usr/bin/env bash
 # Report Git worktree tokens to the Herdr sidebar.
 #
-# Workspace tokens (Space rows):  $wt     "⎇" when the workspace is a linked worktree
+# Workspace tokens (Space rows):  $dirty  uncommitted file count, cleared when 0
+# Pane tokens (Agent rows):       $repo   main repo name, only for linked worktrees
+#                                 $branch branch name, or short SHA when detached
 #                                 $dirty  uncommitted file count, cleared when 0
-# Pane tokens (Agent rows):       $wt     same marker
-#                                 $repo   main repo name, only for linked worktrees
+#                                 $sync   "↑ahead ↓behind" vs upstream, cleared when even
 #
 # Empty token values clear the key, so non-worktree spaces end up with no tokens.
 set -euo pipefail
 
 SOURCE="herdr-worktree-sidebar"
 HERDR="${HERDR_BIN_PATH:-herdr}"
-WT_MARK="${HERDR_WORKTREE_SIDEBAR_MARK:-⎇}"
 
 command -v jq >/dev/null || { echo "herdr-worktree-sidebar: jq not found" >&2; exit 0; }
 
-# Prints "<repo>\t<is_linked>\t<dirty>" for a directory, or nothing if it is not in Git.
+# Prints "<repo>\t<is_linked>\t<dirty>\t<branch>\t<ahead>\t<behind>" for a directory,
+# or nothing if it is not in Git. Every field is non-empty: `read` collapses empty tab fields.
 git_info() {
-  local dir=$1 top common repo linked dirty
+  local dir=$1 top common repo linked status
   top=$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null) || return 0
   common=$(git -C "$dir" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 0
   # The main checkout owns the common .git dir; a linked worktree lives elsewhere.
   repo=$(basename "$(dirname "$common")")
   linked=0
   [[ "$(dirname "$common")" != "$top" ]] && linked=1
-  dirty=$(git -C "$top" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
-  printf '%s\t%s\t%s\n' "$repo" "$linked" "$dirty"
+  # One call gives branch, upstream divergence, and changed entries.
+  status=$(git -C "$top" status --porcelain=v2 --branch 2>/dev/null) || return 0
+  awk -v repo="$repo" -v linked="$linked" '
+    /^# branch\.oid /  { oid = substr($3, 1, 7) }
+    /^# branch\.head / { head = $3 }
+    /^# branch\.ab /   { ahead = substr($3, 2); behind = substr($4, 2) }
+    !/^#/              { dirty++ }
+    END {
+      if (head == "(detached)" || head == "") head = oid
+      printf "%s\t%s\t%d\t%s\t%d\t%d\n", repo, linked, dirty, head, ahead, behind
+    }' <<<"$status"
+}
+
+# Formats ahead/behind counts as "↑1 ↓2", dropping zero sides.
+sync_text() {
+  local ahead=$1 behind=$2 out=""
+  (( ahead > 0 )) && out="↑$ahead"
+  (( behind > 0 )) && out="${out:+$out }↓$behind"
+  printf '%s' "$out"
 }
 
 refresh_workspace() {
-  local ws=$1 panes first_cwd info repo linked dirty wt
+  local ws=$1 panes first_cwd info repo linked dirty
   panes=$("$HERDR" pane list --workspace "$ws" 2>/dev/null) || return 0
 
   first_cwd=$(jq -r '.result.panes[0].cwd // empty' <<<"$panes")
@@ -37,27 +55,29 @@ refresh_workspace() {
   info=$(git_info "$first_cwd")
   if [[ -z "$info" ]]; then
     "$HERDR" workspace report-metadata "$ws" --source "$SOURCE" \
-      --clear-token wt --clear-token dirty >/dev/null
+      --clear-token dirty >/dev/null
     return 0
   fi
-  IFS=$'\t' read -r repo linked dirty <<<"$info"
-  wt=""; [[ "$linked" == 1 ]] && wt="$WT_MARK"
+  IFS=$'\t' read -r repo linked dirty _ <<<"$info"
   [[ "$dirty" == 0 ]] && dirty=""
 
   "$HERDR" workspace report-metadata "$ws" --source "$SOURCE" \
-    --token "wt=$wt" --token "dirty=$dirty" >/dev/null
+    --token "dirty=$dirty" >/dev/null
 
   # Each pane uses its own cwd: a pane may sit in a different checkout than the workspace.
-  local pane_id cwd
+  local pane_id cwd branch ahead behind sync
   while IFS=$'\t' read -r pane_id cwd; do
     info=$(git_info "$cwd")
-    repo=""; wt=""
+    repo=""; dirty=""; branch=""; sync=""
     if [[ -n "$info" ]]; then
-      IFS=$'\t' read -r repo linked _ <<<"$info"
-      if [[ "$linked" == 1 ]]; then wt="$WT_MARK"; else repo=""; fi
+      IFS=$'\t' read -r repo linked dirty branch ahead behind <<<"$info"
+      [[ "$linked" == 1 ]] || repo=""
+      [[ "$dirty" == 0 ]] && dirty=""
+      sync=$(sync_text "$ahead" "$behind")
     fi
     "$HERDR" pane report-metadata "$pane_id" --source "$SOURCE" \
-      --token "wt=$wt" --token "repo=$repo" >/dev/null || true
+      --token "repo=$repo" --token "branch=$branch" \
+      --token "dirty=$dirty" --token "sync=$sync" >/dev/null || true
   done < <(jq -r '.result.panes[] | [.pane_id, .cwd] | @tsv' <<<"$panes")
 }
 
