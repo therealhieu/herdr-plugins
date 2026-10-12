@@ -46,6 +46,20 @@ sync_text() {
   printf '%s' "$out"
 }
 
+# Prints the cwd an agent reported for a pane (see claude-cwd-hook.sh), else the fallback.
+# Herdr's pane cwd is the process cwd, which Claude's EnterWorktree does not change.
+pane_cwd() {
+  local pane_id=$1 fallback=$2 file cwd
+  file="${XDG_STATE_HOME:-$HOME/.local/state}/herdr-worktree-sidebar/cwd/${pane_id//[^A-Za-z0-9_-]/_}"
+  if [[ -f "$file" ]]; then
+    cwd=$(<"$file")
+    # A removed worktree falls back to the process cwd.
+    if [[ -d "$cwd" ]]; then printf '%s' "$cwd"; return; fi
+    rm -f "$file"
+  fi
+  printf '%s' "$fallback"
+}
+
 refresh_workspace() {
   local ws=$1 panes first_cwd info repo linked dirty
   panes=$("$HERDR" pane list --workspace "$ws" 2>/dev/null) || return 0
@@ -67,7 +81,7 @@ refresh_workspace() {
   # Each pane uses its own cwd: a pane may sit in a different checkout than the workspace.
   local pane_id cwd branch ahead behind sync
   while IFS=$'\t' read -r pane_id cwd; do
-    info=$(git_info "$cwd")
+    info=$(git_info "$(pane_cwd "$pane_id" "$cwd")")
     repo=""; dirty=""; branch=""; sync=""
     if [[ -n "$info" ]]; then
       IFS=$'\t' read -r repo linked dirty branch ahead behind <<<"$info"

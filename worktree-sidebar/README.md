@@ -84,6 +84,30 @@ command = "herdr-worktree-sidebar.refresh"
 description = "worktree sidebar: refresh"
 ```
 
+## Claude Code worktrees
+
+Herdr reports a pane's process cwd. Claude Code's `EnterWorktree` changes Claude's own cwd but not the process cwd,
+so a session that moves into a worktree keeps showing the original checkout's branch.
+
+`bin/claude-cwd-hook.sh` fixes this: it records Claude's cwd per pane under
+`${XDG_STATE_HOME:-~/.local/state}/herdr-worktree-sidebar/cwd/` and triggers a refresh.
+`refresh.sh` prefers that recorded cwd while the directory exists.
+Register it in `~/.claude/settings.json`, pointing at a copy of the script:
+
+```json
+{
+  "hooks": {
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "bash /path/to/claude-cwd-hook.sh" }] }],
+    "SessionEnd":   [{ "hooks": [{ "type": "command", "command": "bash /path/to/claude-cwd-hook.sh" }] }],
+    "PostToolUse":  [{ "matcher": "EnterWorktree|ExitWorktree",
+                       "hooks": [{ "type": "command", "command": "bash /path/to/claude-cwd-hook.sh" }] }]
+  }
+}
+```
+
+`CwdChanged` is deliberately not used: it also fires for a Bash `cd`, and not for the reset that follows.
+The hook is a no-op outside Herdr (no `HERDR_PANE_ID`).
+
 ## Troubleshooting
 
 ```bash
