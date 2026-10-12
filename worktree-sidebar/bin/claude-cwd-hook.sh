@@ -13,6 +13,10 @@ set -euo pipefail
 [[ -n "${HERDR_PANE_ID:-}" ]] || exit 0
 command -v jq >/dev/null || exit 0
 
+# Read the hook input before any herdr call can consume stdin.
+input=$(cat)
+exec </dev/null
+
 HERDR="${HERDR_BIN_PATH:-herdr}"
 STATE="${XDG_STATE_HOME:-$HOME/.local/state}/herdr-worktree-sidebar"
 
@@ -24,7 +28,6 @@ terminal=$(jq -r '.terminal_id' <<<"$pane")
 cwd_file="$STATE/cwd/$terminal"
 origin_file="$STATE/origin/$terminal"
 
-input=$(cat)
 event=$(jq -r '.hook_event_name // empty' <<<"$input")
 tool=$(jq -r '.tool_name // empty' <<<"$input")
 # `cwd` is the session's working directory after the event.
