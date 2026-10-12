@@ -1,0 +1,36 @@
+id = "herdr-stack"
+name = "herdr-stack"
+version = "0.2.0"
+min_herdr_version = "0.9.1"
+description = "Zellij-style stacked panes: the focused pane expands, its siblings collapse to strips"
+platforms = ["linux", "macos", "windows"]
+
+
+[[build]]
+command = ["cargo", "build", "--release", "--locked"]
+
+
+[[events]]
+on = "pane.focused"
+command = ["target/release/herdr-stack"]
+platforms = ["linux", "macos"]
+
+[[events]]
+on = "pane.focused"
+command = ["target/release/herdr-stack.exe"]
+platforms = ["windows"]
+
+
+[[actions]]
+id = "toggle"
+title = "Toggle stacking for this tab"
+contexts = ["pane"]
+command = ["target/release/herdr-stack", "toggle"]
+platforms = ["linux", "macos"]
+
+[[actions]]
+id = "toggle-windows"
+title = "Toggle stacking for this tab"
+contexts = ["pane"]
+command = ["target/release/herdr-stack.exe", "toggle"]
+platforms = ["windows"]
