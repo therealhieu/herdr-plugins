@@ -60,8 +60,28 @@ adopt() {
 
   mkdir -p "$STATE/origin"
   printf '%s\t%s\n' "$ws" "$tab" >"$origin_file"
-  "$HERDR" pane move "$HERDR_PANE_ID" --tab "$target_tab" --split right \
-    --target-pane "$target_pane" "$(focus_flag)" >/dev/null
+  local moved claude left shell
+  moved=$("$HERDR" pane move "$HERDR_PANE_ID" --tab "$target_tab" --split right \
+    --target-pane "$target_pane" "$(focus_flag)") || return 0
+  claude=$(jq -r '.result.move_result.pane.pane_id // empty' <<<"$moved")
+  [[ -n "$claude" ]] || return 0
+  keep_left "$claude" "$target_ws" "$target_tab"
+  # Rearranging panes can relabel the space after its source workspace; restore the worktree label.
+  "$HERDR" workspace rename "$target_ws" "$(jq -r '.result.workspace.label' <<<"$opened")" >/dev/null || true
+}
+
+# Puts the Claude pane on the left by moving whatever sits left of it to its right.
+# A same-tab move between two panes is a no-op and `pane swap` steals focus,
+# so the pane is parked in a new tab (closed once empty) and brought back.
+keep_left() {
+  local claude=$1 ws=$2 tab=$3 left
+  left=$("$HERDR" pane neighbor --pane "$claude" --direction left |
+    jq -r '.result.neighbor.neighbor_pane_id // empty')
+  [[ -n "$left" ]] || return 0
+  left=$("$HERDR" pane move "$left" --new-tab --workspace "$ws" --no-focus |
+    jq -r '.result.move_result.pane.pane_id // empty')
+  [[ -n "$left" ]] || return 0
+  "$HERDR" pane move "$left" --tab "$tab" --split right --target-pane "$claude" --no-focus >/dev/null
 }
 
 # A pane Herdr may close: no agent, and the shell itself is in the foreground.

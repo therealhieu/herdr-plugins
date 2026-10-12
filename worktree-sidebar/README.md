@@ -115,7 +115,7 @@ to get the worktree space without creating it yourself:
 
 ```text
 EnterWorktree → herdr worktree open (or reuse the open space)
-              → move the Claude pane right of that space's shell, keeping focus if it had it
+              → move the Claude pane into that space, left of its shell, keeping focus if it had it
 ExitWorktree  → move the pane back to the tab it came from (a new tab if that tab is gone)
               → close the worktree space if only idle shells remain
 ```
