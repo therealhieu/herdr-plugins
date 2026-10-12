@@ -89,7 +89,7 @@ description = "worktree sidebar: refresh"
 Herdr reports a pane's process cwd. Claude Code's `EnterWorktree` changes Claude's own cwd but not the process cwd,
 so a session that moves into a worktree keeps showing the original checkout's branch.
 
-`bin/claude-cwd-hook.sh` fixes this: it records Claude's cwd per pane under
+`bin/claude-cwd-hook.sh` fixes this: it records Claude's cwd per terminal under
 `${XDG_STATE_HOME:-~/.local/state}/herdr-worktree-sidebar/cwd/` and triggers a refresh.
 `refresh.sh` prefers that recorded cwd while the directory exists.
 Register it in `~/.claude/settings.json`, pointing at a copy of the script:
@@ -107,6 +107,21 @@ Register it in `~/.claude/settings.json`, pointing at a copy of the script:
 
 `CwdChanged` is deliberately not used: it also fires for a Bash `cd`, and not for the reset that follows.
 The hook is a no-op outside Herdr (no `HERDR_PANE_ID`).
+
+### Move the session into a worktree space
+
+Set `HERDR_WORKTREE_SIDEBAR_ADOPT=1` (for example in the `env` block of `~/.claude/settings.json`)
+to get the worktree space without creating it yourself:
+
+```text
+EnterWorktree → herdr worktree open (or reuse the open space)
+              → move the Claude pane right of that space's shell, keeping focus if it had it
+ExitWorktree  → move the pane back to the tab it came from (a new tab if that tab is gone)
+              → close the worktree space if only idle shells remain
+```
+
+The Claude process keeps running; Herdr gives the moved pane a new pane id but still resolves the old one,
+so `HERDR_PANE_ID` keeps working. A worktree space with a busy shell (a dev server, say) is left open.
 
 ## Troubleshooting
 

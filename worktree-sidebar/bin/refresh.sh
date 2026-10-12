@@ -46,11 +46,12 @@ sync_text() {
   printf '%s' "$out"
 }
 
-# Prints the cwd an agent reported for a pane (see claude-cwd-hook.sh), else the fallback.
+# Prints the cwd an agent reported for a terminal (see claude-cwd-hook.sh), else the fallback.
 # Herdr's pane cwd is the process cwd, which Claude's EnterWorktree does not change.
+# Keyed by terminal id because a pane moved to another workspace gets a new pane id.
 pane_cwd() {
-  local pane_id=$1 fallback=$2 file cwd
-  file="${XDG_STATE_HOME:-$HOME/.local/state}/herdr-worktree-sidebar/cwd/${pane_id//[^A-Za-z0-9_-]/_}"
+  local terminal=$1 fallback=$2 file cwd
+  file="${XDG_STATE_HOME:-$HOME/.local/state}/herdr-worktree-sidebar/cwd/$terminal"
   if [[ -f "$file" ]]; then
     cwd=$(<"$file")
     # A removed worktree falls back to the process cwd.
@@ -79,9 +80,9 @@ refresh_workspace() {
     --token "dirty=$dirty" >/dev/null
 
   # Each pane uses its own cwd: a pane may sit in a different checkout than the workspace.
-  local pane_id cwd branch ahead behind sync
-  while IFS=$'\t' read -r pane_id cwd; do
-    info=$(git_info "$(pane_cwd "$pane_id" "$cwd")")
+  local pane_id terminal cwd branch ahead behind sync
+  while IFS=$'\t' read -r pane_id terminal cwd; do
+    info=$(git_info "$(pane_cwd "$terminal" "$cwd")")
     repo=""; dirty=""; branch=""; sync=""
     if [[ -n "$info" ]]; then
       IFS=$'\t' read -r repo linked dirty branch ahead behind <<<"$info"
@@ -92,7 +93,7 @@ refresh_workspace() {
     "$HERDR" pane report-metadata "$pane_id" --source "$SOURCE" \
       --token "repo=$repo" --token "branch=$branch" \
       --token "dirty=$dirty" --token "sync=$sync" >/dev/null || true
-  done < <(jq -r '.result.panes[] | [.pane_id, .cwd] | @tsv' <<<"$panes")
+  done < <(jq -r '.result.panes[] | [.pane_id, .terminal_id, .cwd] | @tsv' <<<"$panes")
 }
 
 all_workspaces() {
